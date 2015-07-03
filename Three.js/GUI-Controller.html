@@ -160,7 +160,7 @@ function init()
 		reset: function() { resetCube() }
 	};
 
-	var folder1 = gui.addFolder('Position');
+	var folder1 = gui.addFolder('Sofa Body Scale');
 	var cubeX = folder1.add( parameters, 'x' ).min(0).max(30).step(1).listen();
 	var cubeY = folder1.add( parameters, 'y' ).min(0).max(30).step(1).listen();
 	var cubeZ = folder1.add( parameters, 'z' ).min(0).max(30).step(1).listen();
@@ -189,7 +189,7 @@ function init()
 	cubeVisible.onChange(function(value)
 	{   cube.visible = value;  	});
 
-	gui.add( parameters, 'reset' ).name("Reset Cube Parameters");
+	gui.add( parameters, 'reset' ).name("Reset Sofa Parameters");
 
 	gui.open();
 }
