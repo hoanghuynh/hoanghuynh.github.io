@@ -50,8 +50,7 @@ var keyboard = new THREEx.KeyboardState();
 var clock = new THREE.Clock();
 
 // custom global variables
-var cube;
-var cube2;
+var arm1, arm2, cube, ratio, prevValueX = 10;
 var parameters;
 var gui;
 
@@ -128,23 +127,33 @@ function init()
 	// cube = new THREE.Mesh( cubeGeometry, cubeMaterial );
 	// cube.position.set(0,30,0);
 	var jsonLoader = new THREE.JSONLoader();
-	jsonLoader.load( "models/sofa-main.json", addModelToScene );
-	jsonLoader.load( "models/sofa.json", addModelToScene2 );
+	jsonLoader.load( "models/A1.json", addModelToScene );
+	jsonLoader.load( "models/A2.json", addModelToScene2 );
+	jsonLoader.load( "models/L.json", addModelToScene3 );
 
 	function addModelToScene( geometry, materials )
 	{
-		var material = new THREE.MeshPhongMaterial( { color:0xff0000, transparent:true, opacity:1 } );
-		cube = new THREE.Mesh( geometry, material );
-		cube.scale.set(10,10,10);
-		scene.add( cube )
+		var material = new THREE.MeshFaceMaterial( materials );
+		arm1 = new THREE.Mesh( geometry, material );
+		arm1.scale.set(10,10,10);
+		scene.add( arm1 );
 	}
 
 	function addModelToScene2( geometry, materials )
 	{
 		var material = new THREE.MeshFaceMaterial( materials );
-		cube2 = new THREE.Mesh( geometry, material );
-		cube2.scale.set(10,10,10);
-		scene.add( cube2 )
+		arm2 = new THREE.Mesh( geometry, material );
+		arm2.scale.set(10,10,10);
+		scene.add( arm2 )
+	}
+
+	function addModelToScene3( geometry, materials )
+	{
+		var material = new THREE.MeshFaceMaterial( materials );
+		cube = new THREE.Mesh( geometry, material );
+		cube.scale.set(10,10,10);
+		scene.add( cube )
+		ratio = (new THREE.Box3().setFromObject(cube)).size().z / 10;
 	}
 
 	var axes = new THREE.AxisHelper();
@@ -169,12 +178,20 @@ function init()
 	var cubeZ = folder1.add( parameters, 'z' ).min(0).max(30).step(1).listen();
 	folder1.open();
 
-	cubeX.onChange(function(value)
-	{ cube.scale.setX(value) });
-	cubeY.onChange(function(value)
-	{ cube.scale.setY(value) });
-	cubeZ.onChange(function(value)
-	{ cube.scale.setZ(value); cube2.scale.setZ(value) });
+	cubeX.onChange(function(value) {
+		cube.scale.setY(value);
+		arm1.scale.setY(value);
+		arm2.scale.setY(value);
+	});
+	cubeY.onChange(function(value) {
+		cube.scale.setZ(value)
+	});
+	cubeZ.onChange(function(value) {
+		cube.scale.setX(value);
+		arm1.translateX((value - prevValueX)*ratio);
+		arm2.translateX(-(value - prevValueX)*ratio);
+		prevValueX = value;
+	});
 
 	var cubeColor = gui.addColor( parameters, 'color' ).name('Color').listen();
 	cubeColor.onChange(function(value) // onFinishChange
@@ -214,6 +231,11 @@ function updateCube()
 	cube.scale.setX(parameters.x);
 	cube.scale.setY(parameters.y);
 	cube.scale.setZ(parameters.z);
+	arm1.scale.setY(parameters.x);
+	arm2.scale.setY(parameters.x);
+	arm1.translateX((10 - prevValueX)*ratio);
+	arm2.translateX(-(10 - prevValueX)*ratio);
+	prevValueX = 10;
 	cube.material.color.setHex( parameters.color.replace("#", "0x") );
 	cube.material.opacity = parameters.opacity;
 	cube.material.transparent = true;
