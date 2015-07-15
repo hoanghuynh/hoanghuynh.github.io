@@ -50,7 +50,7 @@ var keyboard = new THREEx.KeyboardState();
 var clock = new THREE.Clock();
 
 // custom global variables
-var arm1, arm2, cube, ratio, prevValueX = 10;
+var arm1, arm2, cube, ratio, prevValueX = prevValueY = prevValueZ = 10;
 var parameters;
 var gui;
 
@@ -90,18 +90,24 @@ function init()
 	container.appendChild( stats.domElement );
 	// LIGHT
 	var light = new THREE.PointLight(0xffffff);
+	var light2 = new THREE.PointLight(0xffffff);
 	light.position.set(-100,150,100);
+	light2.position.set(100,150,-100);
 
 	var lightbulbGeometry = new THREE.SphereGeometry( 10, 16, 8 );
 	var lightbulbMaterial = new THREE.MeshBasicMaterial( { color: 0xffff44, transparent: true,  opacity: 0.8, blending: THREE.AdditiveBlending } );
 	var wireMaterial = new THREE.MeshBasicMaterial( { color: 0x000000, wireframe: true } );
 	var materialArray = [lightbulbMaterial, wireMaterial];
 	var lightbulb = THREE.SceneUtils.createMultiMaterialObject( lightbulbGeometry, materialArray );
+	var lightbulb2 = THREE.SceneUtils.createMultiMaterialObject( lightbulbGeometry, materialArray );
 	// var lightbulb = new THREE.Mesh( lightbulbGeometry, lightbulbMaterial );
 	lightbulb.position = light.position;
+	lightbulb2.position = light2.position;
 	// lightbulb.material.;
 	scene.add(lightbulb);
+	scene.add(lightbulb2);
 	scene.add(light);
+	scene.add(light2);
 	// FLOOR
 	var floorTexture = new THREE.ImageUtils.loadTexture( 'images/checkerboard.jpg' );
 	floorTexture.wrapS = floorTexture.wrapT = THREE.RepeatWrapping;
@@ -119,6 +125,19 @@ function init()
 	// scene.add(skyBox);
 	scene.fog = new THREE.FogExp2( 0x9999ff, 0.00025 );
 
+	// Sofa
+	var sofaTexture = THREE.ImageUtils.loadTexture('images/1.jpg');
+	sofaTexture.wrapS = sofaTexture.wrapT = THREE.RepeatWrapping;
+	sofaTexture.repeat.set( 3, 3 );
+
+	var sofaMaterial = new THREE.MeshPhongMaterial( {
+					color: 0xffffff,
+					specular: 0x222222,
+					shininess: 70,
+					map: sofaTexture,
+					normalScale: new THREE.Vector2( 0.8, 0.8 )
+				} );
+
 	////////////
 	// CUSTOM //
 	////////////
@@ -129,7 +148,7 @@ function init()
 	var jsonLoader = new THREE.JSONLoader();
 	jsonLoader.load( "models/A1.json", addModelToScene );
 	jsonLoader.load( "models/A2.json", addModelToScene2 );
-	jsonLoader.load( "models/L.json", addModelToScene3 );
+	jsonLoader.load( "models/M1-reduced.json", addModelToScene3 );
 
 	function addModelToScene( geometry, materials )
 	{
@@ -150,7 +169,7 @@ function init()
 	function addModelToScene3( geometry, materials )
 	{
 		var material = new THREE.MeshFaceMaterial( materials );
-		cube = new THREE.Mesh( geometry, material );
+		cube = new THREE.Mesh( geometry, sofaMaterial );
 		cube.scale.set(10,10,10);
 		scene.add( cube )
 		ratio = (new THREE.Box3().setFromObject(cube)).size().z / 10;
@@ -165,11 +184,11 @@ function init()
 	parameters =
 	{
 		x: 10, y: 10, z: 10,
-		color: "#ff0000", // color (change "#" to "0x")
+		color: "#ffffff", // color (change "#" to "0x")
 		opacity: 1,
 		visible: true,
-		material: "Phong",
-		reset: function() { resetCube() }
+		// material: "Phong",
+		texture: '1',
 	};
 
 	var folder1 = gui.addFolder('Sofa Body Scale');
@@ -184,10 +203,21 @@ function init()
 		arm2.scale.setY(value);
 	});
 	cubeY.onChange(function(value) {
-		cube.scale.setZ(value)
+		cube.scale.setZ(value);
+
+		textureX = cube.material.map.repeat.x;
+		textureY = cube.material.map.repeat.y;
+		cube.material.map.repeat.set(textureX, textureY * value/prevValueY);
+
+		prevValueY = value;
 	});
 	cubeZ.onChange(function(value) {
 		cube.scale.setX(value);
+
+		textureX = cube.material.map.repeat.x;
+		textureY = cube.material.map.repeat.y;
+		cube.material.map.repeat.set(textureX * value/prevValueX, textureY);
+
 		arm1.translateX((value - prevValueX)*ratio);
 		arm2.translateX(-(value - prevValueX)*ratio);
 		prevValueX = value;
@@ -201,32 +231,49 @@ function init()
 	cubeOpacity.onChange(function(value)
 	{   cube.material.opacity = value;   });
 
-	var cubeMaterial = gui.add( parameters, 'material', [ "Basic", "Lambert", "Phong", "Wireframe" ] ).name('Material Type').listen();
-	cubeMaterial.onChange(function(value)
-	{   updateCube();   });
+	// var cubeMaterial = gui.add( parameters, 'material', [ "Basic", "Lambert", "Phong", "Wireframe" ] ).name('Material Type').listen();
+	// cubeMaterial.onChange(function(value)
+	// {   updateCube();   });
+
+	var cubeTexture = gui.add( parameters, 'texture', ['1', '2', '3']).name('Texture').listen();
+	cubeTexture.onChange(function(value) {
+		var textureRatio = cube.material.map.repeat.x / cube.material.map.repeat.y;
+		switch(value) {
+			case '1':
+				cube.material.map.image.src = 'images/1.jpg';
+				cube.material.map.repeat.set(3 * textureRatio, 3);
+				break;
+			case '2':
+				cube.material.map.image.src = 'images/2.jpg';
+				cube.material.map.repeat.set(20 * textureRatio, 20);
+				break;
+			case '3':
+				cube.material.map.image.src = 'images/3.jpg';
+				cube.material.map.repeat.set(10 * textureRatio, 10);
+				break;
+		}
+	});
 
 	var cubeVisible = gui.add( parameters, 'visible' ).name('Visible?').listen();
 	cubeVisible.onChange(function(value)
 	{   cube.visible = value;  	});
-
-	gui.add( parameters, 'reset' ).name("Reset Sofa Parameters");
 
 	gui.open();
 }
 
 function updateCube()
 {
-	var value = parameters.material;
-	var newMaterial;
-	if (value == "Basic")
-		newMaterial = new THREE.MeshBasicMaterial( { color: 0x000000 } );
-	else if (value == "Lambert")
-		newMaterial = new THREE.MeshLambertMaterial( { color: 0x000000 } );
-	else if (value == "Phong")
-		newMaterial = new THREE.MeshPhongMaterial( { color: 0x000000 } );
-	else // (value == "Wireframe")
-		newMaterial = new THREE.MeshBasicMaterial( { wireframe: true } );
-	cube.material = newMaterial;
+	// var value = parameters.material;
+	// var newMaterial;
+	// if (value == "Basic")
+	// 	newMaterial = new THREE.MeshBasicMaterial( { color: 0x000000 } );
+	// else if (value == "Lambert")
+	// 	newMaterial = new THREE.MeshLambertMaterial( { color: 0x000000 } );
+	// else if (value == "Phong")
+	// 	newMaterial = new THREE.MeshPhongMaterial( { color: 0x000000 } );
+	// else // (value == "Wireframe")
+	// 	newMaterial = new THREE.MeshBasicMaterial( { wireframe: true } );
+	// cube.material = newMaterial;
 
 	cube.scale.setX(parameters.x);
 	cube.scale.setY(parameters.y);
